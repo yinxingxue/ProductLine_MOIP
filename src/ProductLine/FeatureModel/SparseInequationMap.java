@@ -36,6 +36,7 @@ import ilog.concert.IloNumVarType;
 import ilog.concert.IloRange;
 import ilog.cplex.IloCplex.UnknownObjectException;
 import ncgop.cplex.tsl.ntu.sg.NCGOP;
+import ncgop.cplex.tsl.ntu.sg.NCGOP_CutTry;
 
 /**
  * @author yinxing
@@ -674,6 +675,12 @@ public class SparseInequationMap extends InequationMap {
 			else if(Cplex_Product_Main.CPLEX_SEARCH_MODE == 3)
 			{
 				NCGOP ipExecutor= new NCGOP(cplex, 4,this.feature2Vari.size());
+				ipExecutor.setParas(F,this.sparseEquations, this.sparseAtMostInequations);
+				ipExecutor.execute(ipExecutor.getExtra_A(),ipExecutor.getExtra_B(),ipExecutor.getF(),ipExecutor.getF(), 4, ipExecutor.getE_out() ,sols);
+			}
+			else if(Cplex_Product_Main.CPLEX_SEARCH_MODE == 4)
+			{
+				NCGOP_CutTry ipExecutor= new NCGOP_CutTry(cplex, 4,this.feature2Vari.size());
 				ipExecutor.setParas(F,this.sparseEquations, this.sparseAtMostInequations);
 				ipExecutor.execute(ipExecutor.getExtra_A(),ipExecutor.getExtra_B(),ipExecutor.getF(),ipExecutor.getF(), 4, ipExecutor.getE_out() ,sols);
 			}

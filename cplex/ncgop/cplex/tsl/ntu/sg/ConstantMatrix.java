@@ -12,7 +12,7 @@ import cplex.tsl.ntu.sg.Utility;
 public class ConstantMatrix {
 
 	static Double[][] V;
- 
+	static Double[][] v;
 	public static void initialize(Double[][] y_up, int No)
 	{
 		V = new Double[No-1][No];
@@ -36,4 +36,39 @@ public class ConstantMatrix {
 
 	}
 
+	public static Double[][] normalizeUtopia(Double[][] y_up, int No)
+	{
+		/**
+		 * 
+		 for i=1:No
+         	if i == 1
+            	v = y_up(No,:)-y_up(i,:);
+        	elseif i==No
+            	continue;    
+        	else
+            	v = [v;y_up(No,:)-y_up(i,:)];
+        	end
+         end
+          % v: the normal vector of utopia plane
+		 */
+	    v = new Double[No-1][No];
+		for(int i=1; i<= No; i++ )
+		{
+			Double[] v_i = null;
+			if(i==1)
+			{
+				v_i =Utility.ArraySubtraction(y_up[No-1], y_up[i-1]);
+			}
+			else if(i==No)
+			{
+				continue;
+			}
+			else 
+			{
+				v_i = Utility.ArraySubtraction(y_up[No-1], y_up[i-1]);
+			}
+			v[i-1] = v_i;
+		}
+		return v;
+	}
 }
