@@ -74,6 +74,30 @@ public class Utility {
 		return x;
 	}
 
+	public static double[] toPrimateArray(Double[] xval) {
+		double[] x = new double[xval.length];
+		int i=0;
+		for(Double xv: xval)
+		{
+			x[i++]= CplexResultComparator.formatDouble2(xv);
+		}
+		return x;
+	}
+	
+	public static double[][] toPrimateMat(Double[][] mat) {
+		double[][] m = new double[mat.length][];
+ 
+		for(int i=0; i< mat.length;i++)
+		{
+			m[i] = new double[mat[i].length];
+			for(int j=0; j< mat[i].length;j++)
+			{
+				m[i][j] = mat[i][j];
+			}
+		}
+		return m;
+	}
+	
 	/**
 	 *  
 	 * @param times 500
@@ -385,6 +409,18 @@ public class Utility {
 		return mat_trans;
 	}
 
+	public static Double[][] MatrixSubMat(Double[][] mat, int startRow, int startCol) {
+		Double[][] mat_sub = new Double[mat.length-startRow][mat[0].length-startCol];
+		for(int i=startRow;i<mat.length;i++)
+		{
+			for(int j=startCol;j<mat[0].length;j++)
+			{
+				mat_sub[i-startRow][j-startCol]= mat[i][j];
+			}
+		}
+		return mat_sub;
+	}
+	
 	public static Double[][] zeroMatrix(int row, int column) {
 		Double[][]  results = new Double[row][column];
 		for(int i=0; i< row; i++ )

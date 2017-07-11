@@ -39,7 +39,7 @@ import jmetal.util.comparators.FitnessComparator;
 public class Cplex_Product_Main {
 
 	public final static int NUM_OF_SOLS = 1000;// Integer.MAX_VALUE;
-	public static int CPLEX_SEARCH_MODE = 3; // 0 for epsilon search, 1 for binary search speedup, 2 for CWMOIP, 3 for SolRep
+	public static int CPLEX_SEARCH_MODE = 4; // 0 for epsilon search, 1 for binary search speedup, 2 for CWMOIP, 3 for SolRep, 4 for SolRep_cut&try
 	public static int CPLEX_SEARCH_SPEEDUP = 128; 
 	
 	public static FileWriter logger_;
