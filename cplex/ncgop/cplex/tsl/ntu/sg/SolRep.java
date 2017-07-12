@@ -101,6 +101,7 @@ public class SolRep {
 	    
 		// do the initialization of X0
 		Double[] ini = Utility.generateRandomDouble(No);
+		ini[0] = 0.4970845481049563; ini[1] = 0.061224489795918366;ini[2]= 0.4380466472303207;ini[3]= 0.0036443148688046646;
 		ini = Utility.ArrayDivision(ini, Utility.arraySum(ini));
 		Double[] X0 = Utility.ArrayProduceMatrix(ini, Utility.MatrixTranspose(y_up));
 		Double[] p = X0;
@@ -189,15 +190,15 @@ public class SolRep {
 		     ff[Nv+No] = 1.0;
 		     //ff = [zeros(1,Nv+No),1]; 
 		     
-		     //long startTime=System.currentTimeMillis();   //获取�?始时�?  
+		     //long startTime=System.currentTimeMillis();   //获取�?始时�?  
 		     CplexResult positiveRst = NCGOP.mixintlinprog (cplex, this.xVar, ff,null,null,tempAeq2,tempBeq2, lb,ub);
 		     //long endTime=System.currentTimeMillis(); //获取结束时间  
 		     //long time1= (endTime-startTime)/1000;
-		     //startTime=System.currentTimeMillis();   //获取�?始时�?  
+		     //startTime=System.currentTimeMillis();   //获取�?始时�?  
 		     CplexResult negativeRst = NCGOP.mixintlinprog (cplex, this.xVar, Utility.negArray(ff),null,null,tempAeq2,tempBeq2, lb,ub);
 		     //endTime=System.currentTimeMillis(); //获取结束时间
 		     //long time2= (endTime-startTime)/1000;
-		     //System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );  
+		     //System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );  
 		     
 	
 		     if(positiveRst.getExitflag())
@@ -412,16 +413,16 @@ public class SolRep {
 				 // ub = [ones(1,Nv),Inf*ones(1,No),Inf];
 		     }
 		     
-		     long startTime=System.currentTimeMillis();   //获取�?始时�?  
+		     long startTime=System.currentTimeMillis();   //获取�?始时�?  
 		     CplexResult positiveRst = NCGOP.mixintlinprog (null, null, ff,this.extra_A,this.ori_B,this.extra_Aeq,this.extra_Beq, lb,ub);
 		     long endTime=System.currentTimeMillis(); //获取结束时间  
 		     long time1= (endTime-startTime)/1000;
-		     startTime=System.currentTimeMillis();   //获取�?始时�?  
+		     startTime=System.currentTimeMillis();   //获取�?始时�?  
 		     CplexResult negativeRst = NCGOP.mixintlinprog (null, null, Utility.negArray(ff),this.extra_A,this.ori_B,this.extra_Aeq,this.extra_Beq, lb,ub);	
 		     endTime=System.currentTimeMillis(); //获取结束时间
 		     long time2= (endTime-startTime)/1000;
 		     
-		     System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );  
+		     System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );  
 		     
 		     if(positiveRst.getExitflag())
 		     {

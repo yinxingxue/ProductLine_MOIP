@@ -23,21 +23,21 @@ import cplex.tsl.ntu.sg.Utility;
 
 public class SolRep_CutTry {
 	/** Input*/
-	protected Double[][] y_up;
-	protected Double[][] f;
-	protected int varNo;
-	private int n;
-	private Vector<LinkedHashMap<Short, Double>> ori_A;
-	private Vector<Double> ori_B;
+	Double[][] y_up;
+	Double[][] f;
+    int varNo;
+	int n;
+	Vector<LinkedHashMap<Short, Double>> ori_A;
+	Vector<Double> ori_B;
 	
-	private Vector<LinkedHashMap<Short, Double>> ori_Aeq;
-	private Vector<Double> ori_Beq;
+	Vector<LinkedHashMap<Short, Double>> ori_Aeq;
+	Vector<Double> ori_Beq;
 	
-	private Vector<LinkedHashMap<Short, Double>> extra_A;
-	private Vector<Double> extra_B;
+	Vector<LinkedHashMap<Short, Double>> extra_A;
+	Vector<Double> extra_B;
 	
-	private Vector<LinkedHashMap<Short, Double>> extra_Aeq;
-	private Vector<Double> extra_Beq;
+	Vector<LinkedHashMap<Short, Double>> extra_Aeq;
+	Vector<Double> extra_Beq;
 	
 	public Double[][] getY_up() {
 		return y_up;
@@ -48,8 +48,9 @@ public class SolRep_CutTry {
 	}
 
 	/** Output*/
-	protected Vector<Double[]> P;
-	private  IloNumVar[] xVar;
+	Vector<Double[]> P;
+	IloNumVar[] xVar;
+	Double[] w;
 	
 	public SolRep_CutTry(Double[][] y_up, int varNo, int n) {
 		this.y_up = y_up;
@@ -59,7 +60,7 @@ public class SolRep_CutTry {
 	}
 
 	@SuppressWarnings({ "unchecked" })
-	public Vector<Double[]> calculate() throws Exception {
+	public Vector<Double[]> calculateWandV() throws Exception {
 	 	int No = y_up.length;
 		int Nv = this.varNo;
 			
@@ -136,86 +137,8 @@ public class SolRep_CutTry {
 		double[] w_ext= new double[w_values.length+1]; 
 		w_ext[0]= 1;
 		System.arraycopy(w_values,0,w_ext,1,w_values.length);
-		Double[] w = Utility.ArrayDivision(Utility.toObjectArray(w_ext), Utility.ArrayNorm2(Utility.toObjectArray(w_ext)));
-		
-		//generate constant upper bounds and lower bounds
-	    double[] lb = ArrayUtils.toPrimitive(Utility.zeros(1, Nv+No+1));
-		 for(int k = Nv;k<lb.length; k++)
-	     {
-	    	 lb[k] = Double.NEGATIVE_INFINITY;
-	    	 //lb = [zeros(1,Nv),-Inf*ones(1,No),-Inf];
-	     }
-	     double[] ub = ArrayUtils.toPrimitive(Utility.ones(1, Nv+No+1));
-	     for(int k = Nv;k<ub.length; k++)
-	     {
-	    	 ub[k] = Double.POSITIVE_INFINITY;
-			 // ub = [ones(1,Nv),Inf*ones(1,No),Inf];
-	     }
-		
-		this.extra_A = (Vector<LinkedHashMap<Short, Double>>) ori_A.clone();
-		this.extra_B = (Vector<Double>) ori_B.clone();
-		this.extra_Aeq =  (Vector<LinkedHashMap<Short, Double>>) ori_Aeq.clone();
-		this.extra_Beq=  (Vector<Double>) ori_Beq.clone();
-		Vector<LinkedHashMap<Short, Double>> Aeq1 = convertMatrixs2SparseMat(f, Utility.negMatrix(Utility.eyeMatrix(No)), Utility.zeroMatrix(No,1));
-	    this.extra_Aeq.addAll(Aeq1);
-	    Double[] Beq1 = Utility.zeros(1, No);
-	    this.extra_Beq.addAll(Arrays.asList(Beq1));
-	    IloCplex cplex = initializeCplex(Nv, No, extra_A, extra_B, extra_Aeq, extra_Beq, lb, ub);
-	    
-		// Finding other N-1 points 
-		for(int i =0; i< n-1;i++)
-		{
+		w = Utility.ArrayDivision(Utility.toObjectArray(w_ext), Utility.ArrayNorm2(Utility.toObjectArray(w_ext)));
 			
-			Double[] mult = Utility.randDistributedArray(1,No-1)[0];
-			mult = Utility.ArrayDivision(mult,Utility.ArrayNorm2(mult) );
-			Double[] D = Utility.ArrayProduceMatrix(mult,  Utility.MatrixTranspose(V));
-			//Finding the limit of lambda
-			 double lambda_l=0;
-			 double lambda_u=0;
-			 
-		     //modify extra_Aeq
-		     
-		     //	  Aeq1 = [f,-eye(No),zeros(No,1)];
-		     Vector<LinkedHashMap<Short, Double>> tempAeq2 = convertMatrixs2SparseMat(Utility.zeroMatrix(No,Nv),Utility.eyeMatrix(No), Utility.negMatrix(Utility.MatrixTranspose(Utility.twoDemensionize(D))));
-		     //   Aeq2 = [zeros(No,Nv),eye(No),-D'];
-		   
-		     //this.extra_Aeq.addAll(Aeq2);
-		     //   Aeq = [Aeq;Aeq1;Aeq2];
-		     
-		
-		     Double[] Beq2 = X0;
-		     Vector<Double> tempBeq2 = new Vector<Double>();
-		     tempBeq2.addAll(Arrays.asList(Beq2));
-		     //this.extra_Beq.addAll(Arrays.asList(Beq2));
-		     //beq = [beq;zeros(No,1);X0'];
-		     Double[] ff = Utility.zeros(1, Nv+No+1);
-		     ff[Nv+No] = 1.0;
-		     //ff = [zeros(1,Nv+No),1]; 
-		     
-		     //long startTime=System.currentTimeMillis();   //获取�?始时�?  
-		     CplexResult positiveRst = NCGOP.mixintlinprog (cplex, this.xVar, ff,null,null,tempAeq2,tempBeq2, lb,ub);
-		     //long endTime=System.currentTimeMillis(); //获取结束时间  
-		     //long time1= (endTime-startTime)/1000;
-		     //startTime=System.currentTimeMillis();   //获取�?始时�?  
-		     CplexResult negativeRst = NCGOP.mixintlinprog (cplex, this.xVar, Utility.negArray(ff),null,null,tempAeq2,tempBeq2, lb,ub);
-		     //endTime=System.currentTimeMillis(); //获取结束时间
-		     //long time2= (endTime-startTime)/1000;
-		     //System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );  
-		     
-	
-		     if(positiveRst.getExitflag())
-		     {
-		    	 lambda_l= positiveRst.getFVAL();
-       	  	 }
-		     if(negativeRst.getExitflag())
-		     {
-		    	 lambda_u = negativeRst.getFVAL() *-1.0;
-		     }
-		     
-		     double lambda = Utility.unifrnd(lambda_l,lambda_u);
-		     X0 =  Utility.ArraySum(X0,Utility.ArrayMultiply(D,lambda));
-		     P.add(X0);
-		}
 		return P;
 	}
 

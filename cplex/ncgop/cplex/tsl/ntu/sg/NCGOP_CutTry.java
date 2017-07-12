@@ -253,10 +253,17 @@ public class NCGOP_CutTry {
 	 
 		this.pGenerator = new SolRep_CutTry(this.utopiaPlane.getY_up(), this.varNv,N);
 		this.pGenerator.setParas(this.ori_A,this.ori_B,this.ori_Aeq,this.ori_Beq,f_in);
-		Vector<Double[]> points = this.pGenerator.calculate();
-		System.out.println("pGenerator done.");
+		Vector<Double[]> points = this.pGenerator.calculateWandV();
+		System.out.println("w, V calculation done.");
 	    //this.V = calculateV(this.utopiaPlane.getY_up(),this.objNo);
-		
+		int n_sol=0;
+		while(n_sol<N+1){
+			if(n_sol!=0)
+			{
+				Double[] p_k= HitAndRunGenerator.calculateReferPoint(pGenerator);
+			}
+			
+		}
 		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
 		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
 		// for non-Linux projects
