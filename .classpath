@@ -25,7 +25,7 @@
 	<classpathentry kind="lib" path="Lib/jcommander-1.7.jar"/>
 	<classpathentry kind="lib" path="Lib/cplex.jar">
 		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="ProductLine_IBDE_LVAT_EJOR/Lib"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="ProductLine_SolRep/Lib"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="Lib/org.sat4j.core_2_0_5_2.jar"/>

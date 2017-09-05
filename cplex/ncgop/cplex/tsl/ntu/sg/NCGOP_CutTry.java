@@ -257,12 +257,17 @@ public class NCGOP_CutTry {
 		System.out.println("w, V calculation done.");
 	    //this.V = calculateV(this.utopiaPlane.getY_up(),this.objNo);
 		int n_sol=0;
+		Double[] p_k = pGenerator.P.get(0);
+		int counter =0; 
 		while(n_sol<N+1){
 			if(n_sol!=0)
 			{
-				Double[] p_k= HitAndRunGenerator.calculateReferPoint(pGenerator);
+				p_k= HitAndRunGenerator.calculateReferPoint(p_k,pGenerator);
+				pGenerator.P.add(p_k);
 			}
 			
+			System.out.println("using p_k: "+counter++);
+			calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),sols);
 		}
 		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
 		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
@@ -280,12 +285,12 @@ public class NCGOP_CutTry {
 //			cplex.setParam(IloCplex.DoubleParam.TiLim, 5000);
 		}
 		
-	    int counter =0; 
-		for(Double[] p_k: points)
-		{
-			System.out.println("using p_k: "+counter++);
-			calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),sols);
-		}
+	    //int counter =0; 
+		//for(Double[] p_k: points)
+		//{
+		//	System.out.println("using p_k: "+counter++);
+		//	calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),sols);
+		//}
 		System.out.println("Find solution num: "+sols.size());
 	}
 
@@ -300,22 +305,13 @@ public class NCGOP_CutTry {
 		int Nv = this.varNv;
 		
 		/**  Matlab code :
-		AA = [A;f(1:No-1,:)];                                        % add constraints
-		bb = [b;p_k(1:No-1,:)];
-
-		lb = zeros(1,Nv);                                      % Lower and upper bound of variables
-		ub = ones(1,Nv) ;
-		intcon = 1: Nv;
+		%add constraint: f*x = p_k + lambda*w
+			AAeq = [Aeq,zeros(size(Aeq,1),1)];
+			AAeq = [AAeq;[f,-w]];
+			bbeq = [beq;p_k];
+			AA = [A,zeros(size(A,1),1)];
 		*/
-		 
-		Vector<LinkedHashMap<Short, Double>> extra_A1 = Utility.denseMatrix2SparseMatrix(Utility.getFirstItem(f,this.objNo-1));
-	    Vector<Double> extra_B1 = Utility.denseArray2SparseArray(Utility.getFirstItem(p_k,this.objNo-1));
-		//Vector<LinkedHashMap<Short, Double>> AA = (Vector<LinkedHashMap<Short, Double>>)ori_A2.clone();
-		//Vector<Double> BB = (Vector<Double>) ori_B2.clone();
-		//AA.addAll(extra_A1);
-		//BB.addAll(extra_B1);
-		Double[] lb = Utility.zeros(1, Nv);
-		Double[] ub = Utility.ones(1, Nv);
+        Double[] Aeq1 = Utility.zeros(0, ori_A2.size());
 		
 		/**  Matlab code :
 		% calculate new objective function with CWMOIP
@@ -345,6 +341,18 @@ public class NCGOP_CutTry {
 			}
 			
 		}
+	 		 
+		Vector<LinkedHashMap<Short, Double>> extra_A1 = Utility.denseMatrix2SparseMatrix(Utility.getFirstItem(f,this.objNo-1));
+	    Vector<Double> extra_B1 = Utility.denseArray2SparseArray(Utility.getFirstItem(p_k,this.objNo-1));
+		//Vector<LinkedHashMap<Short, Double>> AA = (Vector<LinkedHashMap<Short, Double>>)ori_A2.clone();
+		//Vector<Double> BB = (Vector<Double>) ori_B2.clone();
+		//AA.addAll(extra_A1);
+		//BB.addAll(extra_B1);
+		Double[] lb = Utility.zeros(1, Nv);
+		Double[] ub = Utility.ones(1, Nv);
+		
+		
+	
 		rst = intlinprog (this.cplex, this.xVar, ff, extra_A1,extra_B1,null,null,lb,ub);
 		if(rst.getExitflag())
 		{

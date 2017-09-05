@@ -29,11 +29,16 @@ public class HitAndRunGenerator {
 
 	}
 
-	public static Double[] calculateReferPoint(SolRep_CutTry pGenerator) {
+	public static Double[] calculateReferPoint(Double[] p_k, SolRep_CutTry pGenerator) {
 		int No = pGenerator.y_up.length;
 		int Nv = pGenerator.varNo;
-		Double[] X0 = pGenerator.P.get(0);
+		//Double[] X0 = pGenerator.P.get(0);
 
+		Double[] mult = Utility.randDistributedArray(1, No - 1)[0];
+		mult = Utility.ArrayDivision(mult, Utility.ArrayNorm2(mult));
+		Double[] D = Utility.ArrayProduceMatrix(mult,
+				Utility.MatrixTranspose(ConstantMatrix.V));
+		Double[] new_p_k = null;
 		try {
 			// generate constant upper bounds and lower bounds
 			double[] lb = ArrayUtils.toPrimitive(Utility.zeros(1, Nv + No + 1));
@@ -67,12 +72,9 @@ public class HitAndRunGenerator {
 					pGenerator.extra_Beq, lb, ub);
 
 			// Finding other N-1 points
-			for (int i = 0; i < pGenerator.n - 1; i++) {
+			//for (int i = 0; i < pGenerator.n - 1; i++) {
 
-				Double[] mult = Utility.randDistributedArray(1, No - 1)[0];
-				mult = Utility.ArrayDivision(mult, Utility.ArrayNorm2(mult));
-				Double[] D = Utility.ArrayProduceMatrix(mult,
-						Utility.MatrixTranspose(ConstantMatrix.V));
+			
 				// Finding the limit of lambda
 				double lambda_l = 0;
 				double lambda_u = 0;
@@ -91,7 +93,7 @@ public class HitAndRunGenerator {
 				// this.extra_Aeq.addAll(Aeq2);
 				// Aeq = [Aeq;Aeq1;Aeq2];
 
-				Double[] Beq2 = X0;
+				Double[] Beq2 = p_k;
 				Vector<Double> tempBeq2 = new Vector<Double>();
 				tempBeq2.addAll(Arrays.asList(Beq2));
 				// this.extra_Beq.addAll(Arrays.asList(Beq2));
@@ -100,19 +102,19 @@ public class HitAndRunGenerator {
 				ff[Nv + No] = 1.0;
 				// ff = [zeros(1,Nv+No),1];
 
-				// long startTime=System.currentTimeMillis(); //获取�?始时�?
+				// long startTime=System.currentTimeMillis(); //鑾峰彇锟�?濮嬫椂锟�?
 				CplexResult positiveRst = NCGOP.mixintlinprog(cplex,
 						pGenerator.xVar, ff, null, null, tempAeq2, tempBeq2,
 						lb, ub);
-				// long endTime=System.currentTimeMillis(); //获取结束时间
+				// long endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿
 				// long time1= (endTime-startTime)/1000;
-				// startTime=System.currentTimeMillis(); //获取�?始时�?
+				// startTime=System.currentTimeMillis(); //鑾峰彇锟�?濮嬫椂锟�?
 				CplexResult negativeRst = NCGOP.mixintlinprog(cplex,
 						pGenerator.xVar, Utility.negArray(ff), null, null,
 						tempAeq2, tempBeq2, lb, ub);
-				// endTime=System.currentTimeMillis(); //获取结束时间
+				// endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿
 				// long time2= (endTime-startTime)/1000;
-				// System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );
+				// System.out.println("for p_i锟�? "+ time1+"s and "+time2+"s" );
 
 				if (positiveRst.getExitflag()) {
 					lambda_l = positiveRst.getFVAL();
@@ -122,9 +124,9 @@ public class HitAndRunGenerator {
 				}
 
 				double lambda = Utility.unifrnd(lambda_l, lambda_u);
-				X0 = Utility.ArraySum(X0, Utility.ArrayMultiply(D, lambda));
-				pGenerator.P.add(X0);
-			}
+			    new_p_k = Utility.ArraySum(p_k, Utility.ArrayMultiply(D, lambda));
+				//pGenerator.P.add(X0);
+			//}
 		} catch (IloException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -133,7 +135,7 @@ public class HitAndRunGenerator {
 			e.printStackTrace();
 		}
 
-		return null;
+		return new_p_k;
 	}
 
 }
