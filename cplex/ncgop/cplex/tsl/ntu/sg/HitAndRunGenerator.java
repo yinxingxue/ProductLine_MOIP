@@ -103,13 +103,13 @@ public class HitAndRunGenerator {
 				// ff = [zeros(1,Nv+No),1];
 
 				// long startTime=System.currentTimeMillis(); //鑾峰彇锟�?濮嬫椂锟�?
-				CplexResult positiveRst = NCGOP.mixintlinprog(cplex,
+				CplexResult positiveRst = NCGOP_CutTry.mixintlinprog(cplex,
 						pGenerator.xVar, ff, null, null, tempAeq2, tempBeq2,
 						lb, ub);
 				// long endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿
 				// long time1= (endTime-startTime)/1000;
 				// startTime=System.currentTimeMillis(); //鑾峰彇锟�?濮嬫椂锟�?
-				CplexResult negativeRst = NCGOP.mixintlinprog(cplex,
+				CplexResult negativeRst = NCGOP_CutTry.mixintlinprog(cplex,
 						pGenerator.xVar, Utility.negArray(ff), null, null,
 						tempAeq2, tempBeq2, lb, ub);
 				// endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿

@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import ProductLine.FeatureModel.FeatureModel;
 import ProductLine.FeatureModel.LogicFeatureModel;
 import cplex.tsl.ntu.sg.CplexResult;
@@ -54,7 +56,9 @@ public class NCGOP_CutTry {
 	
 	private Vector<LinkedHashMap<Short, Double>> extra_A;
 	private Vector<Double> extra_B;
-	  
+	private Vector<LinkedHashMap<Short, Double>> extra_Aeq;
+	private Vector<Double> extra_Beq;
+	
 	// InequationMap inequationMap;
 	protected int omittedBits;
 	
@@ -312,75 +316,38 @@ public class NCGOP_CutTry {
 			AA = [A,zeros(size(A,1),1)];
 		*/
 	    //[Aeq,zeros(size(Aeq,1),1)] is to add one column of 0 for the existing Aeq
-		
-	    this.extra_A=  new  Vector<LinkedHashMap<Short, Double>> ();
-	    //get the [f,-w]
+		//get the [f,-w]
 	    Double[] neg_w = Utility.negArray(w);
+	    //get the extra Aeq
+	    this.extra_Aeq = Utility.denseTwoMatrix2SparseMatrix(f, Utility.twoDemensionizeAndTranspose(neg_w));
+	    Vector<LinkedHashMap<Short, Double>> tempAeq=  this.extra_Aeq;
+	    //get the extra Beq
+	    this.extra_Beq = Utility.denseArray2SparseArray(p_k);
+	    Vector<Double> tempBeq = this.extra_Beq;
 		
-		/**  Matlab code :
-		% calculate new objective function with CWMOIP
+	    //while no extra for the inequalities A and B
+		
+	    /**  Matlab code :
+	    lb = [zeros(1,Nv),-Inf];                                      % Lower and upper bound of variables
+	    ub = [ones(1,Nv),0] ;
+	    intcon = [];
 
-		ff = f(No,:);
-		for i=1:(No-1)
-    		i = No-i;
-    		w = 1/(y_ub(i,1)-y_lb(i,1)+1);
-    		ff = ff + w*f(i,:);
-		end
-		
-		[X,FVAL,Exitflag] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
-		*/
-		Double[] ff = new Double[No];
-		CplexResult rst=null;
-		for(int i =No-1; i>=0;i--)
-		{
-			
-			if(i == No-1)
-			{
-				ff= f[i];
-			}
-			else
-			{
-				 double w_v=  1.0/(y_ub[i] - y_lb[i]+1);
-				 ff= Utility.ArraySum(1.0, ff, w_v, f[i]);   
-			}
-			
-		}
-	 		 
-		Vector<LinkedHashMap<Short, Double>> extra_A1 = Utility.denseMatrix2SparseMatrix(Utility.getFirstItem(f,this.objNo-1));
-	    Vector<Double> extra_B1 = Utility.denseArray2SparseArray(Utility.getFirstItem(p_k,this.objNo-1));
-		//Vector<LinkedHashMap<Short, Double>> AA = (Vector<LinkedHashMap<Short, Double>>)ori_A2.clone();
-		//Vector<Double> BB = (Vector<Double>) ori_B2.clone();
-		//AA.addAll(extra_A1);
-		//BB.addAll(extra_B1);
-		Double[] lb = Utility.zeros(1, Nv);
-		Double[] ub = Utility.ones(1, Nv);
-		
-		
-	
-		rst = intlinprog (this.cplex, this.xVar, ff, extra_A1,extra_B1,null,null,lb,ub);
-		if(rst.getExitflag())
-		{
-			 Vector<LinkedHashMap<Short, Double>> new_A1 = Utility.denseMatrix2SparseMatrix(Utility.twoDemensionize(ff));
-			 //AA.addAll(new_A1);
-			 Double new_b = Utility.ArrayProducts(ff,rst.getXvar() , ff.length);
-			 //BB.add(new_b);
-		}
+	    ff = [zeros(1,Nv),1]; 
+
+	    [X,FVAL,Exitflag] = intlinprog (ff,intcon,AA,b,AAeq,bbeq,lb,ub);
+	    */
+	    double[] lb = ArrayUtils.toPrimitive(Utility.zeros(1, Nv  + 1));
+		lb[Nv] = Double.NEGATIVE_INFINITY;
 		 
-		/**  Matlab code :
-		y = zeros(1,No);
-		x = zeros(1,Nv);
-		if Exitflag==1
-    		X = round(X);
-    		y = [y;(f*X)'];
-    		x = [x;X'];
-    		fCWMOIP = FVAL;
-		end
-		*/
-		if(rst.getExitflag())
-		{
-			addSolutionXToMap(rst,sols);
-			fCWMOIP = Utility.ArrayProducts(ff,rst.getXvar() , ff.length);
-		}
+		double[] ub = ArrayUtils.toPrimitive(Utility.ones(1, Nv + 1));
+		ub[Nv] = 0;
+
+	    Double[] ff = Utility.zeros(1, Nv  + 1);
+	    ff[Nv] = (double) 1; 
+	    
+		CplexResult positiveRst = NCGOP_CutTry.mixintlinprog(cplex,
+				null, ff, null, null, tempAeq, tempBeq,
+				lb, ub);
 		return fCWMOIP;
 	}
 

@@ -456,6 +456,16 @@ public class Utility {
 		return d2;
 	}
 
+
+	public static Double[][] twoDemensionizeAndTranspose(Double[] d1) {
+		Double[][] d2 = new Double[d1.length][1];
+		for(int i=0;i<d1.length;i++)
+		{
+			d2[i][1]= d1[i];
+		}
+		return d2;
+	}
+	
 	public static double unifrnd(double lambda_l, double lambda_u) {
 		double rand= new Random().nextDouble();
 		double range= lambda_u- lambda_l;
@@ -499,6 +509,39 @@ public class Utility {
 		return sparseMapVector;
 	}
 
+	/**
+	 * it is the combining two matrix on axis =1, they must have the same row number
+	 * @param aA
+	 * @param bB
+	 * @return
+	 */
+	public static Vector<LinkedHashMap<Short, Double>> denseTwoMatrix2SparseMatrix(
+			Double[][] aA, Double[][] bB) {
+		assert aA.length == bB.length;
+		Vector<LinkedHashMap<Short, Double>> sparseMapVector= new Vector<LinkedHashMap<Short, Double>>();
+		// for the i-th row
+		for(int i=0;i< aA.length; i++)
+		{
+			LinkedHashMap<Short, Double> sparseMap= new LinkedHashMap<Short, Double>();
+			for(int j=0;j< aA[i].length; j++)
+			{
+				if(aA[i][j]!=0.0)
+				{
+					sparseMap.put((short)j, aA[i][j]);
+				}
+			}
+			for(int j= aA[i].length;j< aA[i].length+ bB[i].length; j++)
+			{
+				if(bB[i][j-aA[i].length]!=0.0)
+				{
+					sparseMap.put((short)j, bB[i][j-aA[i].length]);
+				}
+			}
+			sparseMapVector.addElement(sparseMap);
+		}
+		return sparseMapVector;
+	}
+	
 	public static Vector<Double> denseArray2SparseArray(Double[] bB) {
 		List<Double> bList= Arrays.asList(bB);
 		Vector<Double> bBVector = new Vector<Double>(bList);
