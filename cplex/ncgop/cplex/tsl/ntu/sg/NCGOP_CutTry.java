@@ -267,7 +267,7 @@ public class NCGOP_CutTry {
 			}
 			
 			System.out.println("using p_k: "+counter++);
-			calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),sols);
+			calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),this.pGenerator.w,ConstantMatrix.v, sols);
 		}
 		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
 		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
@@ -298,7 +298,7 @@ public class NCGOP_CutTry {
 			Vector<LinkedHashMap<Short, Double>> ori_A2, Vector<Double> ori_B2,
 			Vector<LinkedHashMap<Short, Double>> ori_Aeq2,
 			Vector<Double> ori_Beq2, Double[][] y_up, Double[] p_k,
-			Double[] y_ub, Double[] y_lb, Map<String, CplexSolution> sols) throws Exception {
+			Double[] y_ub, Double[] y_lb, Double[] w, Double[][] v, Map<String, CplexSolution> sols) throws Exception {
  
 		double fCWMOIP = Double.NaN;
 		int No = this.objNo;
@@ -311,7 +311,11 @@ public class NCGOP_CutTry {
 			bbeq = [beq;p_k];
 			AA = [A,zeros(size(A,1),1)];
 		*/
-        Double[] Aeq1 = Utility.zeros(0, ori_A2.size());
+	    //[Aeq,zeros(size(Aeq,1),1)] is to add one column of 0 for the existing Aeq
+		
+	    this.extra_A=  new  Vector<LinkedHashMap<Short, Double>> ();
+	    //get the [f,-w]
+	    Double[] neg_w = Utility.negArray(w);
 		
 		/**  Matlab code :
 		% calculate new objective function with CWMOIP
@@ -336,8 +340,8 @@ public class NCGOP_CutTry {
 			}
 			else
 			{
-				 double w=  1.0/(y_ub[i] - y_lb[i]+1);
-				 ff= Utility.ArraySum(1.0, ff, w, f[i]);   
+				 double w_v=  1.0/(y_ub[i] - y_lb[i]+1);
+				 ff= Utility.ArraySum(1.0, ff, w_v, f[i]);   
 			}
 			
 		}
