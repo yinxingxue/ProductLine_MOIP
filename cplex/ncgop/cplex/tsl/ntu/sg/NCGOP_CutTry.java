@@ -65,7 +65,13 @@ public class NCGOP_CutTry {
 	public Double[][] getF() {
 		return F;
 	}
-
+    
+	//new field added to support the cut&try approach
+	private Double[] x;
+	private Double[] y;
+	private Double[] yy;
+	private Double [] yyy;
+	
 	protected Set<Boolean[]> E_out;
 
 	private UtopiaPlane utopiaPlane;
@@ -271,7 +277,11 @@ public class NCGOP_CutTry {
 			}
 			
 			System.out.println("using p_k: "+counter++);
-			calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),this.pGenerator.w,ConstantMatrix.v, sols);
+			CplexResult result = calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),this.pGenerator.w,ConstantMatrix.v, sols);
+			if(checkNonDominance(result, sols))
+			{
+				addSolutionXToMap(result, sols);
+			}
 		}
 		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
 		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
@@ -298,16 +308,33 @@ public class NCGOP_CutTry {
 		System.out.println("Find solution num: "+sols.size());
 	}
 
-	public double calculate(Double[][] f,
+	private boolean checkNonDominance(CplexResult result, Map<String, CplexSolution> sols) {
+		// TODO Auto-generated method stub
+		String key =extractSolution (result); 
+		if(sols.containsKey(key))
+			return false;
+		else
+		{			
+			return checkNonDominance(key, sols.keySet());
+		}
+	}
+
+	public static boolean checkNonDominance(String key, Set<String> keySet) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+
+	public CplexResult calculate(Double[][] f,
 			Vector<LinkedHashMap<Short, Double>> ori_A2, Vector<Double> ori_B2,
 			Vector<LinkedHashMap<Short, Double>> ori_Aeq2,
 			Vector<Double> ori_Beq2, Double[][] y_up, Double[] p_k,
 			Double[] y_ub, Double[] y_lb, Double[] w, Double[][] v, Map<String, CplexSolution> sols) throws Exception {
  
-		double fCWMOIP = Double.NaN;
+		CplexResult returnedResult = null;
 		int No = this.objNo;
 		int Nv = this.varNv;
-		
+	 
 		/**  Matlab code :
 		%add constraint: f*x = p_k + lambda*w
 			AAeq = [Aeq,zeros(size(Aeq,1),1)];
@@ -336,19 +363,163 @@ public class NCGOP_CutTry {
 
 	    [X,FVAL,Exitflag] = intlinprog (ff,intcon,AA,b,AAeq,bbeq,lb,ub);
 	    */
-	    double[] lb = ArrayUtils.toPrimitive(Utility.zeros(1, Nv  + 1));
+	    Double[] lb = (Utility.zeros(1, Nv  + 1));
 		lb[Nv] = Double.NEGATIVE_INFINITY;
 		 
-		double[] ub = ArrayUtils.toPrimitive(Utility.ones(1, Nv + 1));
-		ub[Nv] = 0;
+		Double[] ub = (Utility.ones(1, Nv + 1));
+		ub[Nv] = 0.0;
 
 	    Double[] ff = Utility.zeros(1, Nv  + 1);
 	    ff[Nv] = (double) 1; 
 	    
-		CplexResult positiveRst = NCGOP_CutTry.mixintlinprog(cplex,
+		CplexResult result1 = NCGOP_CutTry.mixintlinprog(cplex,
 				null, ff, null, null, tempAeq, tempBeq,
+				Utility.toPrimateArray(lb), Utility.toPrimateArray(ub));
+		
+		if(result1.getExitflag() == true)
+		{
+			/**  Matlab code :
+			yy = (f*X(1:Nv,:))';
+			%% solving the 2nd problem, vertical constraint
+			AA = [A;f(1:No-1,:)];                                        % add constraints
+			bb = [b;yy(:,1:No-1)'];
+			intcon = 1:Nv;
+			% calculate new objective function with CWMOIP
+			ff = f(No,:);
+			*/
+			Double[] X= new Double[Nv];
+			System.arraycopy(result1.getXvar(), 0, X, 0, X.length); //get the values for the Nv deciding variables
+			this.yy = Utility.ArrayProduceMatrix(X, f); 
+			//f(1:No-1,:) is to get the first No-1 rows of objective expression 
+		    Double[][] AA = Utility.getFirstItem(f, No-1);
+		    Vector<LinkedHashMap<Short, Double>> AAtemp = Utility.denseMatrix2SparseMatrix(AA); // the extra_A is the f(1:No-1,:)
+		    // the extra_b is the yy(:,1:No-1)'
+		    Double[] bb = Utility.getFirstItem(yy, No-1);
+		    Vector<Double> bbtemp = Utility.denseArray2SparseArray(bb);
+			// intcon = 1:Nv --- all the deciding variables are int, int programming
+			// ff = f(No,:). the last row (objective) of ff
+		    ff = f[No-1];
+		    /**  Matlab code :
+		    for i=1:(No-1)
+		            i = No-i;
+		            weight = 1/(y_ub(i,1)-y_lb(i,1)+1);
+		            ff = ff + weight*f(i,:);
+		    end
+		    */
+		    //getting the constraint-weighted ff
+		    for(int i=No-2; i>= 0; i--){
+		    	int pos=i;
+		    	double weight = 1.0/(y_ub[pos]-y_lb[pos]+1);
+		    	int targetPos =No-2- i;
+		    	Double[] ffDelta = Utility.ArrayMultiply(f[targetPos],weight);
+		    	ff = Utility.ArraySum(ff, ffDelta);
+		    }
+		    /**  Matlab code :
+		     *  [X,FVAL,Exitflag2] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
+		     */
+		    CplexResult result2 = NCGOP_CutTry.intlinprog(cplex,
+					null, ff, AAtemp, bbtemp, null, null,
+					lb, ub);
+		    
+		    if(result2.getExitflag()!= true) //% solving until find a solution
+		    {
+		    	 /**  Matlab code :
+		    		        bb = [b;p_k(1:No-1,1)];
+		    		        [X,FVAL,Exitflag3] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
+		    		        if Exitflag3 ==1
+		    		            p = p_k;
+		    	  */
+		    	bb = Utility.getFirstItem(p_k, No-1);
+		    	bbtemp = Utility.denseArray2SparseArray(bb);
+		    	CplexResult result3 = NCGOP_CutTry.intlinprog(cplex,
+						null, ff, AAtemp, bbtemp, null, null,
+						lb, ub);
+		    	
+		    	if(result3.getExitflag()==true)
+		    	{
+		    		Double[] p = p_k;
+		    		/**  Matlab code :
+		    		  while Exitflag3 ==1
+	    		                X = round(X);
+	    		                y = (f*X)';
+	    		                x = X';
+	    		                p = 1/2*(p+yy');
+	    		                bb = [b;p(1:No-1,1)];
+	    		                [X,FVAL,Exitflag3] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
+	    		            end
+	    		     */
+		    		while(result3.getExitflag()==true)
+		    		{
+		    			X= result3.getXvar();
+		    			y =  evaluateOnMultiObjs(result3,f);
+		    			returnedResult= result3;
+		    			this.x= X;
+		    			p = Utility.ArrayMultiply(Utility.ArraySum(p, yy),0.5);
+		    			bb = Utility.getFirstItem(p, No-1);
+				    	bbtemp = Utility.denseArray2SparseArray(bb);
+		    			result3 = NCGOP_CutTry.intlinprog(cplex,
+								null, ff, AAtemp, bbtemp, null, null,
+								lb, ub);
+		    		}
+		    	}
+		    	else{
+		    		 /**  Matlab code :
+		    		 else
+    		            y = zeros(1,No);
+    		            x = zeros(1,Nv);
+    		         */
+		    		y= Utility.zeros(1, No);
+		    		x= Utility.zeros(1, Nv);
+		    	}//end of result3
+		    } 
+		    else
+		    {
+		    	 /**  Matlab code :
+		    	  X = round(X);
+		          y = (f*X)';
+		          x = X';
+		         */
+		    	addSolutionXToMap(result2,sols);
+		    	X= result2.getXvar();
+		    	y= evaluateOnMultiObjs(result2,f);
+		    	x= X;
+		    	returnedResult=result2;
+		    }//end of result2
+ 		}
+		else {
+			/**  Matlab code :
+			y = zeros(1,No);
+			*/
+			y= Utility.zeros(1, No);
+			//no results added to sols
+		} //end of result1
+		/**  Matlab code :
+		% epsilon constraint
+		AA = [A;f(1:No-1,:)];                                        % add constraints
+		bb = [b;p_k(1:No-1,:)];
+		intcon = 1:Nv;
+		[X,FVAL,Exitflag3] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
+		if Exitflag3==1
+		    yyy = (f*X)';
+		else
+		    yyy = zeros(1,No);
+		end
+		*/
+		Double[][] AA = Utility.getFirstItem(f, No-1);
+	    Vector<LinkedHashMap<Short, Double>> AAtemp = Utility.denseMatrix2SparseMatrix(AA); // the extra_A is the f(1:No-1,:)
+	    Double[] bb = Utility.getFirstItem(p_k, No-1);
+	    Vector<Double> bbtemp = Utility.denseArray2SparseArray(bb);
+	    CplexResult result4 = NCGOP_CutTry.intlinprog(cplex,
+				null, ff, AAtemp, bbtemp, null, null,
 				lb, ub);
-		return fCWMOIP;
+		if(result4.getExitflag()==true)
+		{
+			yyy= evaluateOnMultiObjs(result4,f);
+		}
+		else {
+			yyy= Utility.zeros(1, No);
+		}
+		return returnedResult;
 	}
 
 	protected void addSolutionXToMap(CplexResult rslt, Map<String, CplexSolution> sols) {
@@ -372,6 +543,28 @@ public class NCGOP_CutTry {
 		System.out.println("BestObj: " + objval + " Cost: "+ costs);
 		//System.out.println("Var: " + Arrays.asList(xvar));
 		
+	}
+	
+	protected String extractSolution(CplexResult rslt) {
+		// f[0] = this.costEffiecient;
+		// f[1] = this.varietyEffiecient;
+		// f[2] = this.usedbeforeEffiecient;
+		// f[3] = this.defectEffiecient; 
+		Double[] xvar = rslt.getXvar();
+		int missingFeatureSize = (int)(xvar.length- omittedBits+ Utility.ArrayProducts(xvar,F[1], xvar.length- omittedBits));
+		int notUsedFeatureSize = (int) (Utility.ArrayProducts(xvar,F[2],xvar.length- omittedBits));
+		double defects = Utility.ArrayProducts(xvar,F[3], xvar.length- omittedBits);
+		double costs = Utility.ArrayProducts(xvar,F[0], xvar.length- omittedBits);
+		
+		CplexSolution sol = new CplexSolution(CplexResultComparator.formatDouble2(costs),missingFeatureSize,notUsedFeatureSize,CplexResultComparator.formatDouble2(defects),xvar);
+	    return sol.getSolutionID(); 
+	}
+	
+	protected Double[] evaluateOnMultiObjs(CplexResult rslt, Double[][] f)
+	{
+		Double[] xvar = rslt.getXvar();
+		Double[] evals= Utility.MatrixProduceArray(f, xvar);
+		return evals;
 	}
 
 	public static List<CplexResult> intlinprog(MyIloCplex cplex, IloIntVar[] xVar,  Double[] doubles,
@@ -716,7 +909,7 @@ public class NCGOP_CutTry {
 
 			CplexResult result = null;
 			if (exitFlag) {
-				double objval = cplex.getObjValue(); // ��ȡ�����е����о��߱����Ľ�ֵ��
+				double objval = cplex.getObjValue(); 
 				double[] xval = cplex.getValues(x);
 				Double[] xvar = Utility.toObjectArray(xval);
 				result = new CplexResult(objval, xvar, exitFlag);
