@@ -37,9 +37,9 @@ public class NCGOP_CutTry {
 	public static int EXE_TIME = 0; 
 	
 	// Parameters Settings
-	protected MyIloCplex cplexOri;
+	//protected MyIloCplex cplexOri;
 	protected IloCplex cplexNum;
-	protected IloCplex cplexInt;
+	protected MyIloCplex cplexInt;
 	protected IloNumVar[] xNumVar;
 	protected IloIntVar[] xIntVar;
 	
@@ -143,7 +143,8 @@ public class NCGOP_CutTry {
 			throw new Exception("input model not LogicFeatureModel");
 		}
 		E_out = new LinkedHashSet<Boolean[]>();
-		this.cplexOri = cplex;
+		this.cplexInt = cplex;
+		this.nonDominantSols = new Vector<Double[]>();
 	}
 
 	/**
@@ -209,7 +210,7 @@ public class NCGOP_CutTry {
 
 
 	protected void initializeCplexInt() throws IloException {
-		this.cplexInt= new IloCplex();
+		//this.cplexInt= new IloCplex();
 		cplexInt.setOut(null);
 		cplexInt.setWarning(null);
  
@@ -319,7 +320,7 @@ public class NCGOP_CutTry {
 	
 	public void execute(Vector<LinkedHashMap<Short, Double>> a_in, Vector<Double> b_in, Double[][] f_in, Double[][] f_out, int k,  Set<Boolean[]> e_in,Map<String, CplexSolution> sols ) throws Exception
 	{
-		this.utopiaPlane = new UtopiaPlane(this.cplexOri,this.xIntVar,a_in,b_in,f_in);
+		this.utopiaPlane = new UtopiaPlane(this.cplexInt,this.xIntVar,a_in,b_in,f_in);
 		this.utopiaPlane.calculate();
 		System.out.println("utopiaPlane done.");
 	 
@@ -340,10 +341,11 @@ public class NCGOP_CutTry {
 			
 			System.out.println("using p_k: "+counter++);
 			CplexResult result = calculate(this.F,this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq,this.utopiaPlane.getY_up(),p_k,this.utopiaPlane.getY_ub(), this.utopiaPlane.getY_lb(),this.pGenerator.w,ConstantMatrix.v, sols);
-			if(checkNonDominance(result, sols))
+			if(result!=null && checkNonDominance(result, sols))
 			{
 				addSolutionXToMap(result, sols);
 			}
+			n_sol= sols.size();
 		}
 		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
 		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
@@ -493,7 +495,7 @@ public class NCGOP_CutTry {
 		    	int pos=i;
 		    	double weight = 1.0/(y_ub[pos]-y_lb[pos]+1);
 		    	int targetPos =No-2- i;
-		    	Double[] ffDelta = Utility.ArrayMultiply(f[targetPos],weight);
+		    	Double[] ffDelta = Utility.ArrayMultiply(f[pos],weight);
 		    	ff = Utility.ArraySum(ff, ffDelta);
 		    }
 		    /**  Matlab code :
@@ -561,7 +563,7 @@ public class NCGOP_CutTry {
 		          y = (f*X)';
 		          x = X';
 		         */
-		    	addSolutionXToMap(result2,sols);
+		    	//addSolutionXToMap(result2,sols);
 		    	X= result2.getXvar();
 		    	y= evaluateOnMultiObjs(result2,f);
 		    	x= X;
