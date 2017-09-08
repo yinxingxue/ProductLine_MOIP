@@ -565,4 +565,16 @@ public class Utility {
 		}
 		return part_p_k;
 	}
+
+	public static boolean dominateSol(Double[] currentSol, Double[] doubleValues) {
+		// TODO Auto-generated method stub
+		for(int i = 0; i < currentSol.length;i++)
+		{
+			if(currentSol[i] > doubleValues[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 }

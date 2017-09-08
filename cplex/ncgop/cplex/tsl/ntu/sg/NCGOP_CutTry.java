@@ -71,6 +71,7 @@ public class NCGOP_CutTry {
 	private Double[] y;
 	private Double[] yy;
 	private Double [] yyy;
+	private Vector<Double[]> nonDominantSols;
 	
 	protected Set<Boolean[]> E_out;
 
@@ -314,16 +315,30 @@ public class NCGOP_CutTry {
 		if(sols.containsKey(key))
 			return false;
 		else
-		{			
-			return checkNonDominance(key, sols.keySet());
+		{		
+			boolean nonDominant = checkNonDominance(key, this.nonDominantSols);
+			return nonDominant;
 		}
 	}
 
-	public static boolean checkNonDominance(String key, Set<String> keySet) {
-		// TODO Auto-generated method stub
-		return false;
+	public static boolean checkNonDominance(String key, Vector<Double[]> nonDominantSols2) {
+		String[] values = key.split("_");
+		Double[] doubleValues = new Double[values.length];
+		for(int i=0; i < values.length; i++)
+		{
+			doubleValues[i] = Double.parseDouble(values[i]);
+		}
+		
+		for(Double[] currentSol: nonDominantSols2)
+		{
+			if(Utility.dominateSol(currentSol,doubleValues))
+			{
+				return false;
+			}
+		}
+		nonDominantSols2.add(doubleValues);
+		return true;
 	}
-
 
 	public CplexResult calculate(Double[][] f,
 			Vector<LinkedHashMap<Short, Double>> ori_A2, Vector<Double> ori_B2,
