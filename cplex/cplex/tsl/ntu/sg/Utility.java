@@ -461,7 +461,7 @@ public class Utility {
 		Double[][] d2 = new Double[d1.length][1];
 		for(int i=0;i<d1.length;i++)
 		{
-			d2[i][1]= d1[i];
+			d2[i][0]= d1[i];
 		}
 		return d2;
 	}

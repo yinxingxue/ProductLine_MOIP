@@ -37,11 +37,14 @@ public class NCGOP_CutTry {
 	public static int EXE_TIME = 0; 
 	
 	// Parameters Settings
-	protected MyIloCplex cplex;
-	protected IloIntVar[] xVar;
+	protected MyIloCplex cplexOri;
+	protected IloCplex cplexNum;
+	protected IloCplex cplexInt;
+	protected IloNumVar[] xNumVar;
+	protected IloIntVar[] xIntVar;
 	
 	protected int objNo;   // Number of objective functions
-	protected  int varNv;  // Number of variables
+	protected int varNv;  // Number of variables
 	protected Double[][] F;
 	protected Double[][] V;
 	
@@ -140,7 +143,7 @@ public class NCGOP_CutTry {
 			throw new Exception("input model not LogicFeatureModel");
 		}
 		E_out = new LinkedHashSet<Boolean[]>();
-		this.cplex = cplex;
+		this.cplexOri = cplex;
 	}
 
 	/**
@@ -165,7 +168,8 @@ public class NCGOP_CutTry {
 	    //add contraints of  sparseEquations, sparseAtMostInequations to the cplex
 	    try {
 	    	builtEqualAndInequalMaps();
-			initializeCplex();
+			initializeCplexInt();
+			initializeCplexNum();
 		} catch (IloException e) {
 			e.printStackTrace();
 		}
@@ -204,9 +208,10 @@ public class NCGOP_CutTry {
 	}
 
 
-	protected void initializeCplex() throws IloException {
-		cplex.setOut(null);
-		cplex.setWarning(null);
+	protected void initializeCplexInt() throws IloException {
+		this.cplexInt= new IloCplex();
+		cplexInt.setOut(null);
+		cplexInt.setWarning(null);
  
 		List<String> varNames = new ArrayList<String>();
 		for(int i = 1; i<= this.varNv; i++)
@@ -214,8 +219,8 @@ public class NCGOP_CutTry {
 			varNames.add("X_"+i);
 			
 		}
-		IloIntVar[] x = cplex.intVarArray(varNv, 0, 1, varNames.toArray(new String[0]));
-		xVar = x;
+		IloIntVar[] x = cplexInt.intVarArray(varNv, 0, 1, varNames.toArray(new String[0]));
+		this.xIntVar = x;
 		// add the normal constraints, A * X <= B
 		List<IloNumExpr> inEqualconsts = new ArrayList<IloNumExpr>();
 		List<IloRange> constantConsts = new ArrayList<IloRange>();
@@ -224,13 +229,13 @@ public class NCGOP_CutTry {
 			List<IloNumExpr> inEqual = new ArrayList<IloNumExpr>();
 			for (Short key: array.keySet()) {
 				    if(key == varNv) continue;
-					IloNumExpr itme = cplex.prod(1.0*array.get(key) , x[key]);
+					IloNumExpr itme = cplexInt.prod(1.0*array.get(key) , x[key]);
 					inEqual.add(itme);
 			}
-			IloNumExpr itemsum = cplex.sum((IloNumExpr[]) inEqual.toArray(new IloNumExpr[0]));
+			IloNumExpr itemsum = cplexInt.sum((IloNumExpr[]) inEqual.toArray(new IloNumExpr[0]));
 
 			inEqualconsts.add(itemsum);
-			IloRange inequalConst = cplex.addLe(itemsum, array.get((short)varNv));
+			IloRange inequalConst = cplexInt.addLe(itemsum, array.get((short)varNv));
 			constantConsts.add(inequalConst);
 		}
 
@@ -241,24 +246,80 @@ public class NCGOP_CutTry {
 			List<IloNumExpr> equal = new ArrayList<IloNumExpr>();
 			for (Short key: array.keySet()) {
 				    if(key == varNv) continue;
-					IloNumExpr itme = cplex.prod(1.0 * array.get(key), x[key]);
+					IloNumExpr itme = cplexInt.prod(1.0 * array.get(key), x[key]);
 					equal.add(itme);
 			}
-			IloNumExpr itemsum = cplex.sum((IloNumExpr[]) equal.toArray(new IloNumExpr[0]));
+			IloNumExpr itemsum = cplexInt.sum((IloNumExpr[]) equal.toArray(new IloNumExpr[0]));
 			// IloNumExpr inEqualconst =
 			// cplex.sum(itemsum,array[array.length-1]);
 			equalconsts.add(itemsum);
-			IloRange equalConst =  cplex.addEq(itemsum,array.get((short)varNv));
+			IloRange equalConst =  cplexInt.addEq(itemsum,array.get((short)varNv));
 			constantConsts.add(equalConst);
 		}
 	
         assert  constantConsts.size() == this.sparseEquations.size()+this.sparseAtMostInequations.size() ;
 	}
 
+	protected void initializeCplexNum() throws IloException {
+		this.cplexNum= new IloCplex();
+		cplexNum.setOut(null);
+		cplexNum.setWarning(null);
+ 
+		List<String> varNames = new ArrayList<String>();
+		for(int i = 1; i<= this.varNv+1; i++)
+		{
+			varNames.add("x_"+i);
+			
+		}
+		double[] lb = Utility.toPrimateArray(Utility.zeros(1, varNv+1));
+		lb[varNv]=  Double.NEGATIVE_INFINITY;
+		double[] ub = Utility.toPrimateArray(Utility.ones(1, varNv+1));
+		ub[varNv]= 0.0;
+		IloNumVar[] x = cplexNum.numVarArray(varNv+1, lb, ub, varNames.toArray(new String[0]));
+		xNumVar = x;
+		
+		// add the normal constraints, A * X <= B
+		List<IloNumExpr> inEqualconsts = new ArrayList<IloNumExpr>();
+		List<IloRange> constantConsts = new ArrayList<IloRange>();
+		for (LinkedHashMap<Short, Double> array: this.sparseAtMostInequations) {
+			//Byte[] array = ori_A[j];
+			List<IloNumExpr> inEqual = new ArrayList<IloNumExpr>();
+			for (Short key: array.keySet()) {
+				    if(key == varNv) continue;
+					IloNumExpr itme = cplexNum.prod(1.0*array.get(key) , x[key]);
+					inEqual.add(itme);
+			}
+			IloNumExpr itemsum = cplexNum.sum((IloNumExpr[]) inEqual.toArray(new IloNumExpr[0]));
 
+			inEqualconsts.add(itemsum);
+			IloRange inequalConst = cplexNum.addLe(itemsum, array.get((short)varNv));
+			constantConsts.add(inequalConst);
+		}
+
+		// add the normal constraints  A_eq * X = B_eq
+		List<IloNumExpr> equalconsts = new ArrayList<IloNumExpr>();
+		for (LinkedHashMap<Short, Double> array: this.sparseEquations) {
+			//Byte[] array = this.A_eq[j];
+			List<IloNumExpr> equal = new ArrayList<IloNumExpr>();
+			for (Short key: array.keySet()) {
+				    if(key == varNv) continue;
+					IloNumExpr itme = cplexNum.prod(1.0 * array.get(key), x[key]);
+					equal.add(itme);
+			}
+			IloNumExpr itemsum = cplexNum.sum((IloNumExpr[]) equal.toArray(new IloNumExpr[0]));
+			// IloNumExpr inEqualconst =
+			// cplex.sum(itemsum,array[array.length-1]);
+			equalconsts.add(itemsum);
+			IloRange equalConst =  cplexNum.addEq(itemsum,array.get((short)varNv));
+			constantConsts.add(equalConst);
+		}
+	
+        assert  constantConsts.size() == this.sparseEquations.size()+this.sparseAtMostInequations.size() ;
+	}
+	
 	public void execute(Vector<LinkedHashMap<Short, Double>> a_in, Vector<Double> b_in, Double[][] f_in, Double[][] f_out, int k,  Set<Boolean[]> e_in,Map<String, CplexSolution> sols ) throws Exception
 	{
-		this.utopiaPlane = new UtopiaPlane(this.cplex,this.xVar,a_in,b_in,f_in);
+		this.utopiaPlane = new UtopiaPlane(this.cplexOri,this.xIntVar,a_in,b_in,f_in);
 		this.utopiaPlane.calculate();
 		System.out.println("utopiaPlane done.");
 	 
@@ -289,13 +350,13 @@ public class NCGOP_CutTry {
 		// for non-Linux projects
 		if(this.varNv< 2000)
 		{
-			cplex.setParam(IloCplex.DoubleParam.DetTiLim, 100);
-			cplex.setParam(IloCplex.DoubleParam.TiLim, 100);
+			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 100);
+			cplexInt.setParam(IloCplex.DoubleParam.TiLim, 100);
 		}
 		else
 		{
-			cplex.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
-			cplex.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
+			cplexInt.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
+			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
 //			cplex.setParam(IloCplex.DoubleParam.DetTiLim, 5000);
 //			cplex.setParam(IloCplex.DoubleParam.TiLim, 5000);
 		}
@@ -378,18 +439,24 @@ public class NCGOP_CutTry {
 
 	    [X,FVAL,Exitflag] = intlinprog (ff,intcon,AA,b,AAeq,bbeq,lb,ub);
 	    */
-	    Double[] lb = (Utility.zeros(1, Nv  + 1));
+	    double[] lb = Utility.toPrimateArray(Utility.zeros(1, Nv  + 1));
 		lb[Nv] = Double.NEGATIVE_INFINITY;
 		 
-		Double[] ub = (Utility.ones(1, Nv + 1));
+		double[] ub = Utility.toPrimateArray(Utility.ones(1, Nv + 1));
 		ub[Nv] = 0.0;
 
+		Double[] lb_Obj =(Utility.zeros(1, Nv  + 1));
+		lb_Obj[Nv] = Double.NEGATIVE_INFINITY;
+			 
+		Double[] ub_Obj =(Utility.ones(1, Nv + 1));
+		ub_Obj[Nv] = 0.0;
+			
 	    Double[] ff = Utility.zeros(1, Nv  + 1);
 	    ff[Nv] = (double) 1; 
 	    
-		CplexResult result1 = NCGOP_CutTry.mixintlinprog(cplex,
-				null, ff, null, null, tempAeq, tempBeq,
-				Utility.toPrimateArray(lb), Utility.toPrimateArray(ub));
+		CplexResult result1 = NCGOP_CutTry.mixintlinprog(cplexNum,
+				this.xNumVar, ff, null, null, tempAeq, tempBeq,
+				lb, ub);
 		
 		if(result1.getExitflag() == true)
 		{
@@ -432,9 +499,9 @@ public class NCGOP_CutTry {
 		    /**  Matlab code :
 		     *  [X,FVAL,Exitflag2] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
 		     */
-		    CplexResult result2 = NCGOP_CutTry.intlinprog(cplex,
-					null, ff, AAtemp, bbtemp, null, null,
-					lb, ub);
+		    CplexResult result2 = NCGOP_CutTry.intlinprog(cplexInt,
+					this.xIntVar, ff, AAtemp, bbtemp, null, null,
+					lb_Obj, ub_Obj);
 		    
 		    if(result2.getExitflag()!= true) //% solving until find a solution
 		    {
@@ -446,9 +513,9 @@ public class NCGOP_CutTry {
 		    	  */
 		    	bb = Utility.getFirstItem(p_k, No-1);
 		    	bbtemp = Utility.denseArray2SparseArray(bb);
-		    	CplexResult result3 = NCGOP_CutTry.intlinprog(cplex,
-						null, ff, AAtemp, bbtemp, null, null,
-						lb, ub);
+		    	CplexResult result3 = NCGOP_CutTry.intlinprog(cplexInt,
+						this.xIntVar, ff, AAtemp, bbtemp, null, null,
+						lb_Obj, ub_Obj);
 		    	
 		    	if(result3.getExitflag()==true)
 		    	{
@@ -472,9 +539,9 @@ public class NCGOP_CutTry {
 		    			p = Utility.ArrayMultiply(Utility.ArraySum(p, yy),0.5);
 		    			bb = Utility.getFirstItem(p, No-1);
 				    	bbtemp = Utility.denseArray2SparseArray(bb);
-		    			result3 = NCGOP_CutTry.intlinprog(cplex,
-								null, ff, AAtemp, bbtemp, null, null,
-								lb, ub);
+		    			result3 = NCGOP_CutTry.intlinprog(cplexInt,
+								this.xIntVar, ff, AAtemp, bbtemp, null, null,
+								lb_Obj, ub_Obj);
 		    		}
 		    	}
 		    	else{
@@ -524,9 +591,9 @@ public class NCGOP_CutTry {
 	    Vector<LinkedHashMap<Short, Double>> AAtemp = Utility.denseMatrix2SparseMatrix(AA); // the extra_A is the f(1:No-1,:)
 	    Double[] bb = Utility.getFirstItem(p_k, No-1);
 	    Vector<Double> bbtemp = Utility.denseArray2SparseArray(bb);
-	    CplexResult result4 = NCGOP_CutTry.intlinprog(cplex,
-				null, ff, AAtemp, bbtemp, null, null,
-				lb, ub);
+	    CplexResult result4 = NCGOP_CutTry.intlinprog(cplexInt,
+				this.xIntVar, ff, AAtemp, bbtemp, null, null,
+				lb_Obj, ub_Obj);
 		if(result4.getExitflag()==true)
 		{
 			yyy= evaluateOnMultiObjs(result4,f);
@@ -752,16 +819,16 @@ public class NCGOP_CutTry {
 				System.err.println("Concert exception caught: " + e);
 				}
 		}
-		if(xVar ==null)
+		if(xVar ==null|| xVar.length !=doubles.length)
 		{
 //			IloIntVar[] intVarArray(int n,
 //                    int[] min,
 //                    int[] max,
 //                    java.lang.String[] name)
 			String[] names = new String[doubles.length];
-			for(int i=0;i<names.length;i++)
+			for(int i=1;i<=names.length;i++)
 			{
-				names[i]= "x_"+i;
+				names[i-1]= "X_"+i;
 			}
 			xVar =  cplex.intVarArray(doubles.length, Utility.ArrayGetFloor(lb),Utility.ArrayGetCeiling(ub), names);
 		}
@@ -864,16 +931,12 @@ public class NCGOP_CutTry {
 					System.err.println("Concert exception caught: " + e);
 					}
 			}
-			if(xVar ==null)
+			if(xVar ==null || xVar.length !=doubles.length)
 			{
-//				IloIntVar[] intVarArray(int n,
-//	                    int[] min,
-//	                    int[] max,
-//	                    java.lang.String[] name)
 				String[] names = new String[doubles.length];
-				for(int i=0;i<names.length;i++)
+				for(int i=1;i<=names.length;i++)
 				{
-					names[i]= "x_"+i;
+					names[i-1]= "X_"+i;
 				}
 				xVar =  cplex.numVarArray(doubles.length, lb,ub, names); 
 				//xVar =  cplex.intVarArray(doubles.length, Utility.ArrayGetFloor(lb),Utility.ArrayGetCeiling(ub), names);
