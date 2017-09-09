@@ -52,6 +52,10 @@ public class SolRep_CutTry {
 	IloNumVar[] xVar;
 	Double[] w;
 	
+	protected IloCplex cplex;
+	protected double[] lb;
+	protected double[] ub;
+	
 	public SolRep_CutTry(Double[][] y_up, int varNo, int n) {
 		this.y_up = y_up;
 		this.varNo = varNo;
@@ -144,7 +148,7 @@ public class SolRep_CutTry {
 
 	protected IloCplex initializeCplex(int Nv, int No, Vector<LinkedHashMap<Short, Double>> a_in,   Vector<Double> b_in,
 			Vector<LinkedHashMap<Short, Double>> aeq_in,   Vector<Double> beq_in,double[] lb, double[] ub) throws IloException {
-		IloCplex cplex = new IloCplex();
+		this.cplex = new IloCplex();
 		cplex.setWarning(null);
 		cplex.setOut(null);
 		if(Nv< 2000)
@@ -338,16 +342,16 @@ public class SolRep_CutTry {
 				 // ub = [ones(1,Nv),Inf*ones(1,No),Inf];
 		     }
 		     
-		     long startTime=System.currentTimeMillis();   //获取�?始时�?  
+		     long startTime=System.currentTimeMillis();   //鑾峰彇锟�?濮嬫椂锟�?  
 		     CplexResult positiveRst = NCGOP.mixintlinprog (null, null, ff,this.extra_A,this.ori_B,this.extra_Aeq,this.extra_Beq, lb,ub);
-		     long endTime=System.currentTimeMillis(); //获取结束时间  
+		     long endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿  
 		     long time1= (endTime-startTime)/1000;
-		     startTime=System.currentTimeMillis();   //获取�?始时�?  
+		     startTime=System.currentTimeMillis();   //鑾峰彇锟�?濮嬫椂锟�?  
 		     CplexResult negativeRst = NCGOP.mixintlinprog (null, null, Utility.negArray(ff),this.extra_A,this.ori_B,this.extra_Aeq,this.extra_Beq, lb,ub);	
-		     endTime=System.currentTimeMillis(); //获取结束时间
+		     endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿
 		     long time2= (endTime-startTime)/1000;
 		     
-		     System.out.println("for p_i�? "+ time1+"s and "+time2+"s" );  
+		     System.out.println("for p_i锟�? "+ time1+"s and "+time2+"s" );  
 		     
 		     if(positiveRst.getExitflag())
 		     {
@@ -377,6 +381,79 @@ public class SolRep_CutTry {
 		this.f = f_in;
 		//this.extra_Aeq = new Vector<LinkedHashMap<Short, Double>>();
 		//this.extra_Beq= new Vector<Double>();
+		try {
+			int No = y_up.length;
+			int Nv = this.varNo;
+			// generate constant upper bounds and lower bounds
+			this.lb = ArrayUtils.toPrimitive(Utility.zeros(1, Nv + No + 1));
+			for (int k = Nv; k < lb.length; k++) {
+				lb[k] = Double.NEGATIVE_INFINITY;
+				// lb = [zeros(1,Nv),-Inf*ones(1,No),-Inf];
+			}
+			this.ub = ArrayUtils.toPrimitive(Utility.ones(1, Nv + No + 1));
+			for (int k = Nv; k < ub.length; k++) {
+				ub[k] = Double.POSITIVE_INFINITY;
+				// ub = [ones(1,Nv),Inf*ones(1,No),Inf];
+			}
+
+			cplex = initializeCplex(Nv, No, this.ori_A, this.ori_B, this.ori_Aeq, this.ori_Beq, lb, ub);
+			this.extra_A = new Vector<LinkedHashMap<Short, Double>>();
+			this.extra_B = new Vector<Double>();
+			this.extra_Aeq = new Vector<LinkedHashMap<Short, Double>>();
+			this.extra_Beq = new Vector<Double>();
+			Vector<LinkedHashMap<Short, Double>> Aeq1 = this
+					.convertMatrixs2SparseMat(this.f,
+							Utility.negMatrix(Utility.eyeMatrix(No)),
+							Utility.zeroMatrix(No, 1));
+			this.extra_Aeq.addAll(Aeq1);
+			Double[] Beq1 = Utility.zeros(1, No);
+			this.extra_Beq.addAll(Arrays.asList(Beq1));
+			cplex = initializeCplexWihtMoreCons(this.extra_A,this.extra_B,this.extra_Aeq, this.extra_Beq);
+		}
+		catch(Exception e)
+		{
+			
+		}
+	}
+
+	protected IloCplex initializeCplexWihtMoreCons(Vector<LinkedHashMap<Short, Double>> extra_A_in, Vector<Double> extra_B_in,
+			Vector<LinkedHashMap<Short, Double>> extra_Aeq_in, Vector<Double> extra_Beq_in) throws IloException {
+		// add the normal constraints, A * X <= B
+		List<IloRange> constantConsts = new ArrayList<IloRange>();
+		List<IloNumExpr> inEqualconsts = new ArrayList<IloNumExpr>();
+
+		// add the new inequality constraints
+		for (int j = 0; j < extra_A_in.size(); j++) {
+			LinkedHashMap<Short, Double> array = extra_A_in.get(j);
+			List<IloNumExpr> inEqual = new ArrayList<IloNumExpr>();
+			for (Short key : array.keySet()) {
+				IloNumExpr itme = cplex.prod(1.0 * array.get(key), xVar[key]);
+				inEqual.add(itme);
+			}
+			IloNumExpr itemsum = cplex.sum((IloNumExpr[]) inEqual.toArray(new IloNumExpr[0]));
+			inEqualconsts.add(itemsum);
+			IloRange extra1 = cplex.addLe(itemsum, (double) extra_B_in.get(j));
+			constantConsts.add(extra1);
+		}
+
+		// add the normal constraints A_eq * X = B_eq
+		List<IloNumExpr> equalconsts = new ArrayList<IloNumExpr>();
+		// add the new equality constraints
+		for (int j = 0; j < extra_Aeq_in.size(); j++) {
+			LinkedHashMap<Short, Double> array = extra_Aeq_in.get(j);
+			List<IloNumExpr> equal = new ArrayList<IloNumExpr>();
+			for (Short key : array.keySet()) {
+				IloNumExpr itme = cplex.prod(1.0 * array.get(key), xVar[key]);
+				equal.add(itme);
+			}
+			IloNumExpr itemsum = cplex.sum((IloNumExpr[]) equal.toArray(new IloNumExpr[0]));
+			equalconsts.add(itemsum);
+			IloRange extra2 = cplex.addEq(itemsum, (double) extra_Beq_in.get(j));
+			constantConsts.add(extra2);
+		}
+
+		assert constantConsts.size() == inEqualconsts.size() + equalconsts.size();
+		return this.cplex;
 	}
 
 	public static void expendSparseMatrixWithZeroColumns(Vector<LinkedHashMap<Short, Double>> ori_A, int startPos, int length) {

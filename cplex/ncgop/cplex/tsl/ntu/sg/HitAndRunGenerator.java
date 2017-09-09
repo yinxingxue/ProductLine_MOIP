@@ -40,37 +40,20 @@ public class HitAndRunGenerator {
 				Utility.MatrixTranspose(ConstantMatrix.V));
 		Double[] new_p_k = null;
 		try {
-			// generate constant upper bounds and lower bounds
-			double[] lb = ArrayUtils.toPrimitive(Utility.zeros(1, Nv + No + 1));
-			for (int k = Nv; k < lb.length; k++) {
-				lb[k] = Double.NEGATIVE_INFINITY;
-				// lb = [zeros(1,Nv),-Inf*ones(1,No),-Inf];
-			}
-			double[] ub = ArrayUtils.toPrimitive(Utility.ones(1, Nv + No + 1));
-			for (int k = Nv; k < ub.length; k++) {
-				ub[k] = Double.POSITIVE_INFINITY;
-				// ub = [ones(1,Nv),Inf*ones(1,No),Inf];
-			}
-
-			pGenerator.extra_A = (Vector<LinkedHashMap<Short, Double>>) pGenerator.ori_A
-					.clone();
-			pGenerator.extra_B = (Vector<Double>) pGenerator.ori_B.clone();
-			pGenerator.extra_Aeq = (Vector<LinkedHashMap<Short, Double>>) pGenerator.ori_Aeq
-					.clone();
-			pGenerator.extra_Beq = (Vector<Double>) pGenerator.ori_Beq.clone();
-			Vector<LinkedHashMap<Short, Double>> Aeq1 = pGenerator
-					.convertMatrixs2SparseMat(pGenerator.f,
-							Utility.negMatrix(Utility.eyeMatrix(No)),
-							Utility.zeroMatrix(No, 1));
-			pGenerator.extra_Aeq.addAll(Aeq1);
-			Double[] Beq1 = Utility.zeros(1, No);
-			pGenerator.extra_Beq.addAll(Arrays.asList(Beq1));
-			IloCplex cplex;
-
-			cplex = pGenerator.initializeCplex(Nv, No, pGenerator.extra_A,
-					pGenerator.extra_B, pGenerator.extra_Aeq,
-					pGenerator.extra_Beq, lb, ub);
-
+			
+//			pGenerator.extra_A = (Vector<LinkedHashMap<Short, Double>>) pGenerator.ori_A
+//					.clone();
+//			pGenerator.extra_B = (Vector<Double>) pGenerator.ori_B.clone();
+//			pGenerator.extra_Aeq = (Vector<LinkedHashMap<Short, Double>>) pGenerator.ori_Aeq
+//					.clone();
+//			pGenerator.extra_Beq = (Vector<Double>) pGenerator.ori_Beq.clone();
+//			Vector<LinkedHashMap<Short, Double>> Aeq1 = pGenerator
+//					.convertMatrixs2SparseMat(pGenerator.f,
+//							Utility.negMatrix(Utility.eyeMatrix(No)),
+//							Utility.zeroMatrix(No, 1));
+//			pGenerator.extra_Aeq.addAll(Aeq1);
+//			Double[] Beq1 = Utility.zeros(1, No);
+//			pGenerator.extra_Beq.addAll(Arrays.asList(Beq1));
 			// Finding other N-1 points
 			//for (int i = 0; i < pGenerator.n - 1; i++) {
 
@@ -103,15 +86,15 @@ public class HitAndRunGenerator {
 				// ff = [zeros(1,Nv+No),1];
 
 				// long startTime=System.currentTimeMillis(); //鑾峰彇锟�?濮嬫椂锟�?
-				CplexResult positiveRst = NCGOP_CutTry.mixintlinprog(cplex,
+				CplexResult positiveRst = NCGOP_CutTry.mixintlinprog(pGenerator.cplex,
 						pGenerator.xVar, ff, null, null, tempAeq2, tempBeq2,
-						lb, ub);
+						pGenerator.lb, pGenerator.ub);
 				// long endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿
 				// long time1= (endTime-startTime)/1000;
 				// startTime=System.currentTimeMillis(); //鑾峰彇锟�?濮嬫椂锟�?
-				CplexResult negativeRst = NCGOP_CutTry.mixintlinprog(cplex,
+				CplexResult negativeRst = NCGOP_CutTry.mixintlinprog(pGenerator.cplex,
 						pGenerator.xVar, Utility.negArray(ff), null, null,
-						tempAeq2, tempBeq2, lb, ub);
+						tempAeq2, tempBeq2, pGenerator.lb, pGenerator.ub);
 				// endTime=System.currentTimeMillis(); //鑾峰彇缁撴潫鏃堕棿
 				// long time2= (endTime-startTime)/1000;
 				// System.out.println("for p_i锟�? "+ time1+"s and "+time2+"s" );
