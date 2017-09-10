@@ -476,6 +476,10 @@ public class Utility {
 	{
 		return   6.1165;
 	}
+	public  static double dummyUnifrnd09_10(double lambda_l, double lambda_u)
+	{
+		return   151.0950;
+	}
 
 	public static Double[][] MatrixProduction(Double[][] v, Double[][] f) {
 		assert v[0].length == f.length;
@@ -576,5 +580,19 @@ public class Utility {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * for the testing purpose
+	 * @param i
+	 * @param j
+	 * @return
+	 */
+	public static Double[][] dummyRandDistributedArray_0910(int i, int j) {
+		Double[][] rand = new Double[i][j];
+		rand[0][0]=  0.0096 ;
+		rand[0][1]=  -0.0240 ;
+		rand[0][2]= -0.0043;
+		return rand;
 	}
 }

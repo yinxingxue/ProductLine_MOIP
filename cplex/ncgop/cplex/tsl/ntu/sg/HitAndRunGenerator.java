@@ -35,6 +35,7 @@ public class HitAndRunGenerator {
 		//Double[] X0 = pGenerator.P.get(0);
 
 		Double[] mult = Utility.randDistributedArray(1, No - 1)[0];
+		//Double[] mult = Utility.dummyRandDistributedArray_0910(1, No - 1)[0];
 		mult = Utility.ArrayDivision(mult, Utility.ArrayNorm2(mult));
 		Double[] D = Utility.ArrayProduceMatrix(mult,
 				Utility.MatrixTranspose(ConstantMatrix.V));
@@ -107,6 +108,7 @@ public class HitAndRunGenerator {
 				}
 
 				double lambda = Utility.unifrnd(lambda_l, lambda_u);
+				//double lambda = Utility.dummyUnifrnd09_10(lambda_l, lambda_u);
 			    new_p_k = Utility.ArraySum(p_k, Utility.ArrayMultiply(D, lambda));
 				//pGenerator.P.add(X0);
 			//}
