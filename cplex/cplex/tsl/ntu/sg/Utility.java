@@ -595,4 +595,22 @@ public class Utility {
 		rand[0][2]= -0.0043;
 		return rand;
 	}
+
+	public static Double[] dummyPkForTesting_0911a1() {
+		Double[] p_k= new Double[4];
+		p_k[0]=62.2007;
+		p_k[1]=-7.1931;
+		p_k[2]=3.5380;
+		p_k[3]=28.9510;
+		return p_k;
+	}
+	
+	public static Double[] dummyPkForTesting_0911a2() {
+		Double[] p_k= new Double[4];
+		p_k[0]=357.7825;
+		p_k[1]=-35.3814 ;
+		p_k[2]=21.2835;
+		p_k[3]=180.5749;
+		return p_k;
+	}
 }

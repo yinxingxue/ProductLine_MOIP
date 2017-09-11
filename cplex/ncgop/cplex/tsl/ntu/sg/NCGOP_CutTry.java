@@ -33,7 +33,7 @@ import ilog.cplex.IloCplex;
  *
  */
 public class NCGOP_CutTry {
-	public static int N = 1000; 
+	public static int N = 200; 
 	public static int EXE_TIME = 0; 
 	
 	// Parameters Settings
@@ -336,6 +336,7 @@ public class NCGOP_CutTry {
 			if(n_sol!=0)
 			{
 				p_k= HitAndRunGenerator.calculateReferPoint(p_k,pGenerator);
+				//p_k= Utility.dummyPkForTesting_0911a2();
 				pGenerator.P.add(p_k);
 			}
 			
