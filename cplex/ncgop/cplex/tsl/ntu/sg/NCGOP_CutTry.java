@@ -33,7 +33,7 @@ import ilog.cplex.IloCplex;
  *
  */
 public class NCGOP_CutTry {
-	public static int N = 200; 
+	public static int N = 1000; 
 	public static int EXE_TIME = 0; 
 	
 	// Parameters Settings
@@ -320,6 +320,26 @@ public class NCGOP_CutTry {
 	
 	public void execute(Vector<LinkedHashMap<Short, Double>> a_in, Vector<Double> b_in, Double[][] f_in, Double[][] f_out, int k,  Set<Boolean[]> e_in,Map<String, CplexSolution> sols ) throws Exception
 	{
+		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
+		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
+		// for non-Linux projects
+		if(this.varNv< 2000)
+		{
+			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 100);
+			cplexInt.setParam(IloCplex.DoubleParam.TiLim, 100);
+			cplexNum.setParam(IloCplex.DoubleParam.DetTiLim, 100);
+			cplexNum.setParam(IloCplex.DoubleParam.TiLim, 100);
+		}
+		else
+		{
+			cplexInt.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
+			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
+			cplexNum.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
+			cplexNum.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
+//			cplex.setParam(IloCplex.DoubleParam.DetTiLim, 5000);
+//			cplex.setParam(IloCplex.DoubleParam.TiLim, 5000);
+		}
+		
 		this.utopiaPlane = new UtopiaPlane(this.cplexInt,this.xIntVar,a_in,b_in,f_in);
 		this.utopiaPlane.calculate();
 		System.out.println("utopiaPlane done.");
@@ -347,21 +367,6 @@ public class NCGOP_CutTry {
 				addSolutionXToMap(result, sols);
 			}
 			n_sol= sols.size();
-		}
-		//for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
-		//then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
-		// for non-Linux projects
-		if(this.varNv< 2000)
-		{
-			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 100);
-			cplexInt.setParam(IloCplex.DoubleParam.TiLim, 100);
-		}
-		else
-		{
-			cplexInt.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
-			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
-//			cplex.setParam(IloCplex.DoubleParam.DetTiLim, 5000);
-//			cplex.setParam(IloCplex.DoubleParam.TiLim, 5000);
 		}
 		
 	    //int counter =0; 
@@ -590,20 +595,22 @@ public class NCGOP_CutTry {
 		    yyy = zeros(1,No);
 		end
 		*/
-		Double[][] AA = Utility.getFirstItem(f, No-1);
-	    Vector<LinkedHashMap<Short, Double>> AAtemp = Utility.denseMatrix2SparseMatrix(AA); // the extra_A is the f(1:No-1,:)
-	    Double[] bb = Utility.getFirstItem(p_k, No-1);
-	    Vector<Double> bbtemp = Utility.denseArray2SparseArray(bb);
-	    CplexResult result4 = NCGOP_CutTry.intlinprog(cplexInt,
-				this.xIntVar, ff, AAtemp, bbtemp, null, null,
-				lb_Obj, ub_Obj);
-		if(result4.getExitflag()==true)
-		{
-			yyy= evaluateOnMultiObjs(result4,f);
-		}
-		else {
-			yyy= Utility.zeros(1, No);
-		}
+		
+		//calculate the non-gradual approach
+//		Double[][] AA = Utility.getFirstItem(f, No-1);
+//	    Vector<LinkedHashMap<Short, Double>> AAtemp = Utility.denseMatrix2SparseMatrix(AA); // the extra_A is the f(1:No-1,:)
+//	    Double[] bb = Utility.getFirstItem(p_k, No-1);
+//	    Vector<Double> bbtemp = Utility.denseArray2SparseArray(bb);
+//	    CplexResult result4 = NCGOP_CutTry.intlinprog(cplexInt,
+//				this.xIntVar, ff, AAtemp, bbtemp, null, null,
+//				lb_Obj, ub_Obj);
+//		if(result4.getExitflag()==true)
+//		{
+//			yyy= evaluateOnMultiObjs(result4,f);
+//		}
+//		else {
+//			yyy= Utility.zeros(1, No);
+//		}
 		return returnedResult;
 	}
 
