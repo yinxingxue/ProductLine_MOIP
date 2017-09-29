@@ -33,7 +33,7 @@ import ilog.cplex.IloCplex;
  *
  */
 public class NCGOP_CutTry {
-	public static int N = 1000; 
+	public static int N = 1500; 
 	public static int EXE_TIME = 0; 
 	
 	// Parameters Settings
@@ -334,8 +334,10 @@ public class NCGOP_CutTry {
 		{
 			cplexInt.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
 			cplexInt.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
+			cplexInt.setParam(IloCplex.DoubleParam.TiLim, 10000);
 			cplexNum.setParam(IloCplex.DoubleParam.WorkMem ,2000.0);
 			cplexNum.setParam(IloCplex.DoubleParam.DetTiLim, 10000);
+			cplexNum.setParam(IloCplex.DoubleParam.TiLim, 10000);
 //			cplex.setParam(IloCplex.DoubleParam.DetTiLim, 5000);
 //			cplex.setParam(IloCplex.DoubleParam.TiLim, 5000);
 		}
@@ -538,6 +540,7 @@ public class NCGOP_CutTry {
 	    		                [X,FVAL,Exitflag3] = intlinprog (ff,intcon,AA,bb,Aeq,beq,lb,ub);
 	    		            end
 	    		     */
+		    		int loopCounter=0;
 		    		while(result3.getExitflag()==true)
 		    		{
 		    			X= result3.getXvar();
@@ -550,6 +553,12 @@ public class NCGOP_CutTry {
 		    			result3 = NCGOP_CutTry.intlinprog(cplexInt,
 								this.xIntVar, ff, AAtemp, bbtemp, null, null,
 								lb_Obj, ub_Obj);
+		    			loopCounter++;
+		    			if(loopCounter>100)
+		    			{
+		    				System.out.println("The inner approaching reaches more than 100 times:"+loopCounter);
+		    				break;
+		    			}
 		    		}
 		    	}
 		    	else{
